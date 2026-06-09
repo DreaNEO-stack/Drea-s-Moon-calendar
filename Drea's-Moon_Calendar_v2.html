@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Drea's Interactive Moon Phase Calendar</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #141b33;
+      --panel2: #1d2747;
+      --text: #f3f6ff;
+      --muted: #aab5d6;
+      --accent: #9bbcff;
+      --border: rgba(255,255,255,0.14);
+      --today: #ffe08a;
+      --link: #c7dcff;
+      --moon-dark: #111827;
+      --moon-light: #f7f3df;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: radial-gradient(circle at top, #1b2b55 0, var(--bg) 48%, #050714 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    header {
+      padding: 26px 18px 18px;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(1.7rem, 3vw, 2.8rem);
+      letter-spacing: 0.02em;
+    }
+
+    .subtitle {
+      margin: 9px auto 0;
+      color: var(--muted);
+      max-width: 840px;
+      line-height: 1.45;
+      font-size: 0.98rem;
+    }
+
+    .toolbar {
+      max-width: 1180px;
+      margin: 0 auto 16px;
+      padding: 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    button, select {
+      border: 1px solid var(--border);
+      background: var(--panel2);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+
+    button:hover, select:hover {
+      border-color: rgba(255,255,255,0.38);
+      background: #263257;
+    }
+
+    .month-title {
+      min-width: 260px;
+      text-align: center;
+      font-size: 1.35rem;
+      font-weight: 700;
+    }
+
+    .calendar-wrap {
+      max-width: 1180px;
+      margin: 0 auto 36px;
+      padding: 0 14px 28px;
+    }
+
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .weekday {
+      padding: 10px 4px;
+      color: var(--muted);
+      text-align: center;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      font-size: 0.85rem;
+    }
+
+    .day {
+      min-height: 158px;
+      background: rgba(20, 27, 51, 0.86);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .day.other-month {
+      opacity: 0.35;
+    }
+
+    .day.today {
+      border-color: var(--today);
+      box-shadow: 0 0 0 2px rgba(255,224,138,0.14) inset, 0 0 18px rgba(255,224,138,0.12);
+    }
+
+    .date-num {
+      align-self: flex-start;
+      font-weight: 700;
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+
+    .moon-box {
+      margin: 7px 0 5px;
+      width: 62px;
+      height: 62px;
+      display: grid;
+      place-items: center;
+    }
+
+    .phase {
+      font-size: 0.78rem;
+      text-align: center;
+      line-height: 1.2;
+      color: #eef3ff;
+      min-height: 2.3em;
+    }
+
+    .special {
+      margin-top: 5px;
+      font-size: 0.75rem;
+      text-align: center;
+      line-height: 1.25;
+      font-weight: 700;
+    }
+
+    .special a {
+      color: var(--link);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+
+    .special a:hover {
+      color: #ffffff;
+    }
+
+    .phase-time {
+      margin-top: auto;
+      padding-top: 5px;
+      color: var(--muted);
+      font-size: 0.7rem;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    .legend {
+      max-width: 1180px;
+      margin: 0 auto 20px;
+      padding: 12px 16px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.45;
+      border: 1px solid var(--border);
+      background: rgba(20, 27, 51, 0.7);
+      border-radius: 14px;
+    }
+
+    .legend strong { color: var(--text); }
+
+    svg.moon {
+      width: 60px;
+      height: 60px;
+      filter: drop-shadow(0 0 6px rgba(255,255,255,0.18));
+    }
+
+    @media (max-width: 850px) {
+      .calendar { gap: 5px; }
+      .day { min-height: 132px; padding: 7px 5px; border-radius: 10px; }
+      .moon-box { width: 48px; height: 48px; }
+      svg.moon { width: 46px; height: 46px; }
+      .phase { font-size: 0.68rem; }
+      .special { font-size: 0.66rem; }
+      .phase-time { display: none; }
+      .weekday { font-size: 0.72rem; }
+    }
+
+    @media (max-width: 560px) {
+      .calendar { grid-template-columns: repeat(7, 1fr); gap: 3px; }
+      .day { min-height: 104px; }
+      .date-num { font-size: 0.78rem; }
+      .moon-box { margin: 4px 0 2px; }
+      .phase { font-size: 0.6rem; }
+      .special { font-size: 0.58rem; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Drea's Interactive Moon Phase Calendar</h1>
+    <p class="subtitle">
+      Moon phases are calculated for Stark County, Ohio local dates. Use the controls to move back two years or forward two years from today. Special Full Moon names are linked to Wikipedia and open in a new tab.
+    </p>
+  </header>
+
+  <section class="toolbar" aria-label="Calendar controls">
+    <button id="prevYear" type="button">&laquo; Year</button>
+    <button id="prevMonth" type="button">&lsaquo; Month</button>
+    <div class="month-title" id="monthTitle"></div>
+    <button id="nextMonth" type="button">Month &rsaquo;</button>
+    <button id="nextYear" type="button">Year &raquo;</button>
+    <button id="todayBtn" type="button">Today</button>
+    <select id="jumpMonth" aria-label="Jump to month"></select>
+    <select id="jumpYear" aria-label="Jump to year"></select>
+  </section>
+
+  <main class="calendar-wrap">
+    <div class="legend">
+      <strong>Location:</strong> Stark County, Ohio, USA &nbsp;|&nbsp;
+      <strong>Coordinates used:</strong> 40.8685&deg; N, 81.2519&deg; W &nbsp;|&nbsp;
+      <strong>Note:</strong> Phase timing is estimated from lunar synodic cycles and displayed in Eastern Time. The illuminated side is shown as it is generally seen in the Northern Hemisphere.
+    </div>
+    <div class="calendar" id="calendar"></div>
+  </main>
+
+<script>
+(function () {
+  const TZ = 'America/New_York';
+  const LAT = 40.8685;
+  const LON = -81.2519;
+  const SYNODIC_MONTH = 29.530588853;
+  const KNOWN_NEW_MOON_JD = 2451550.09765; // 2000-01-06 18:14 UTC
+
+  const now = new Date();
+  const todayLocal = toLocalParts(now);
+  const minDate = new Date(todayLocal.year - 2, todayLocal.month, 1);
+  const maxDate = new Date(todayLocal.year + 2, todayLocal.month + 1, 0);
+
+  let currentYear = todayLocal.year;
+  let currentMonth = todayLocal.month;
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const fullMoonNames = {
+    0: { name: 'Wolf Moon', url: 'https://en.wikipedia.org/wiki/Full_moon#Names' },
+    1: { name: 'Snow Moon', url: 'https://en.wikipedia.org/wiki/Full_moon#Names' },
+    2: { name: 'Worm Moon', url: 'https://en.wikipedia.org/wiki/Full_moon#Names' },
+    3: { name: 'Pink Moon', url: 'https://en.wikipedia.org/wiki/Full_moon#Names' },
+    4: { name: 'Flower Moon', url: 'https://en.wikipedia.org/wiki/Full_moon#Names' },
+    5: { name: 'Strawberry Moon', url: 'https://en.wikipedia.org/wiki/Full_moon#Names' },
+    6: { name: 'Buck Moon', url: 'https://en.wikipedia.org/wiki/Full_moon#Names' },
+    7: { name: 'Sturgeon Moon', url: 'https://en.wikipedia.org/wiki/Full_moon#Names' },
+    8: { name: 'Corn Moon', url: 'https://en.wikipedia.org/wiki/Full_moon#Names' },
+    9: { name: "Hunter's Moon", url: 'https://en.wikipedia.org/wiki/Hunter%27s_moon' },
+    10: { name: 'Beaver Moon', url: 'https://en.wikipedia.org/wiki/Full_moon#Names' },
+    11: { name: 'Cold Moon', url: 'https://en.wikipedia.org/wiki/Full_moon#Names' }
+  };
+
+  function pad2(n) { return String(n).padStart(2, '0'); }
+
+  function toLocalParts(date) {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: TZ,
+      year: 'numeric', month: 'numeric', day: 'numeric',
+      hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false
+    }).formatToParts(date).reduce((acc, p) => {
+      if (p.type !== 'literal') acc[p.type] = Number(p.value);
+      return acc;
+    }, {});
+    return { year: parts.year, month: parts.month - 1, day: parts.day, hour: parts.hour, minute: parts.minute, second: parts.second };
+  }
+
+  function localDateKey(y, m, d) {
+    return `${y}-${pad2(m + 1)}-${pad2(d)}`;
+  }
+
+  function julianDay(date) {
+    return date.getTime() / 86400000 + 2440587.5;
+  }
+
+  function localNoonDate(y, m, d) {
+    // Noon UTC keeps the calculation anchored to the local calendar day in Ohio without accidental edge rollover.
+    return new Date(Date.UTC(y, m, d, 17, 0, 0));
+  }
+
+  function moonAgeDays(date) {
+    const jd = julianDay(date);
+    let age = (jd - KNOWN_NEW_MOON_JD) % SYNODIC_MONTH;
+    if (age < 0) age += SYNODIC_MONTH;
+    return age;
+  }
+
+  function illumination(age) {
+    return (1 - Math.cos(2 * Math.PI * age / SYNODIC_MONTH)) / 2;
+  }
+
+  function phaseName(age) {
+    const p = age / SYNODIC_MONTH;
+    if (p < 0.025 || p >= 0.975) return 'New Moon';
+    if (p < 0.235) return 'Waxing Crescent';
+    if (p < 0.265) return 'First Quarter';
+    if (p < 0.475) return 'Waxing Gibbous';
+    if (p < 0.525) return 'Full Moon';
+    if (p < 0.735) return 'Waning Gibbous';
+    if (p < 0.765) return 'Last Quarter';
+    return 'Waning Crescent';
+  }
+
+  function phasePercent(age) {
+    return age / SYNODIC_MONTH;
+  }
+
+  function findFullMoonsInMonth(y, m) {
+    const result = [];
+    const days = new Date(y, m + 1, 0).getDate();
+    for (let d = 1; d <= days; d++) {
+      const prevAge = moonAgeDays(localNoonDate(y, m, d - 1));
+      const age = moonAgeDays(localNoonDate(y, m, d));
+      const nextAge = moonAgeDays(localNoonDate(y, m, d + 1));
+      if (age > 13.7 && age < 15.8 && age >= prevAge && age >= nextAge) {
+        result.push(d);
+      }
+    }
+    return result;
+  }
+
+  function harvestMoonMonth(y) {
+    // Approximate Northern Hemisphere Harvest Moon: full moon nearest the September equinox.
+    const equinox = new Date(Date.UTC(y, 8, 22, 17, 0, 0));
+    let best = { month: 8, day: 1, diff: Infinity };
+    for (let m = 7; m <= 9; m++) {
+      findFullMoonsInMonth(y, m).forEach(day => {
+        const date = localNoonDate(y, m, day);
+        const diff = Math.abs(date.getTime() - equinox.getTime());
+        if (diff < best.diff) best = { month: m, day, diff };
+      });
+    }
+    return best;
+  }
+
+  function specialFullMoon(y, m, d) {
+    if (phaseName(moonAgeDays(localNoonDate(y, m, d))) !== 'Full Moon') return null;
+    const harvest = harvestMoonMonth(y);
+    if (harvest.month === m && Math.abs(harvest.day - d) <= 1) {
+      return { name: 'Harvest Moon', url: 'https://en.wikipedia.org/wiki/Harvest_moon' };
+    }
+    // The Hunter's Moon is usually the first full moon after the Harvest Moon.
+    if (m === 9) return { name: "Hunter's Moon", url: 'https://en.wikipedia.org/wiki/Hunter%27s_moon' };
+    return fullMoonNames[m] || null;
+  }
+
+  function moonSvg(age) {
+    const p = phasePercent(age);
+    const illum = illumination(age);
+    const waxing = p < 0.5;
+    const percent = Math.round(illum * 100);
+    const id = 'clip' + Math.random().toString(36).slice(2);
+    const r = 48;
+    const cx = 50;
+    const cy = 50;
+    let clipPath = '';
+
+    if (illum < 0.015) {
+      clipPath = `<circle cx="${cx}" cy="${cy}" r="0" />`;
+    } else if (illum > 0.985) {
+      clipPath = `<circle cx="${cx}" cy="${cy}" r="${r}" />`;
+    } else {
+      const k = Math.cos(2 * Math.PI * p);
+      const sweep = waxing ? 1 : 0;
+      const sweep2 = waxing ? 0 : 1;
+      const largeArc = illum > 0.5 ? 1 : 0;
+      const smallArc = illum > 0.5 ? 0 : 1;
+      const rx = Math.max(0.01, Math.abs(k) * r);
+      if (illum < 0.5) {
+        // Crescent: bright sliver on right if waxing, left if waning.
+        if (waxing) {
+          clipPath = `<path d="M ${cx} ${cy-r} A ${r} ${r} 0 0 1 ${cx} ${cy+r} A ${rx} ${r} 0 0 0 ${cx} ${cy-r} Z" />`;
+        } else {
+          clipPath = `<path d="M ${cx} ${cy-r} A ${r} ${r} 0 0 0 ${cx} ${cy+r} A ${rx} ${r} 0 0 1 ${cx} ${cy-r} Z" />`;
+        }
+      } else {
+        // Gibbous: most of disk bright, shadow bite on left if waxing, right if waning.
+        if (waxing) {
+          clipPath = `<path d="M ${cx} ${cy-r} A ${r} ${r} 0 1 1 ${cx} ${cy+r} A ${rx} ${r} 0 0 1 ${cx} ${cy-r} Z" />`;
+        } else {
+          clipPath = `<path d="M ${cx} ${cy-r} A ${r} ${r} 0 1 0 ${cx} ${cy+r} A ${rx} ${r} 0 0 0 ${cx} ${cy-r} Z" />`;
+        }
+      }
+    }
+
+    return `
+      <svg class="moon" viewBox="0 0 100 100" role="img" aria-label="${phaseName(age)}, ${percent}% illuminated">
+        <defs>
+          <clipPath id="${id}">${clipPath}</clipPath>
+          <radialGradient id="g${id}" cx="38%" cy="32%" r="70%">
+            <stop offset="0%" stop-color="#fffbe8" />
+            <stop offset="72%" stop-color="#e3dcc6" />
+            <stop offset="100%" stop-color="#bdb6a4" />
+          </radialGradient>
+        </defs>
+        <circle cx="50" cy="50" r="48" fill="#101623" stroke="rgba(255,255,255,0.20)" stroke-width="1.5" />
+        <circle cx="50" cy="50" r="48" fill="url(#g${id})" clip-path="url(#${id})" />
+        <circle cx="50" cy="50" r="48" fill="none" stroke="rgba(255,255,255,0.26)" stroke-width="1.2" />
+      </svg>`;
+  }
+
+  function phaseDetail(y, m, d) {
+    const age = moonAgeDays(localNoonDate(y, m, d));
+    const name = phaseName(age);
+    const pct = Math.round(illumination(age) * 100);
+    return { age, name, pct };
+  }
+
+  function isToday(y, m, d) {
+    return y === todayLocal.year && m === todayLocal.month && d === todayLocal.day;
+  }
+
+  function clampCurrent() {
+    const test = new Date(currentYear, currentMonth, 1);
+    if (test < minDate) { currentYear = minDate.getFullYear(); currentMonth = minDate.getMonth(); }
+    if (test > maxDate) { currentYear = maxDate.getFullYear(); currentMonth = maxDate.getMonth(); }
+  }
+
+  function populateJumpers() {
+    const jm = document.getElementById('jumpMonth');
+    const jy = document.getElementById('jumpYear');
+    jm.innerHTML = monthNames.map((name, i) => `<option value="${i}">${name}</option>`).join('');
+    const years = [];
+    for (let y = todayLocal.year - 2; y <= todayLocal.year + 2; y++) years.push(y);
+    jy.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+  }
+
+  function render() {
+    clampCurrent();
+    const calendar = document.getElementById('calendar');
+    const title = document.getElementById('monthTitle');
+    const jm = document.getElementById('jumpMonth');
+    const jy = document.getElementById('jumpYear');
+    title.textContent = `${monthNames[currentMonth]} ${currentYear}`;
+    jm.value = String(currentMonth);
+    jy.value = String(currentYear);
+
+    const first = new Date(currentYear, currentMonth, 1);
+    const startOffset = first.getDay();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const prevDays = new Date(currentYear, currentMonth, 0).getDate();
+    let html = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(w => `<div class="weekday">${w}</div>`).join('');
+
+    for (let i = 0; i < 42; i++) {
+      let y = currentYear;
+      let m = currentMonth;
+      let d = i - startOffset + 1;
+      let other = false;
+      if (d < 1) {
+        other = true;
+        m = currentMonth - 1;
+        if (m < 0) { m = 11; y--; }
+        d = prevDays + d;
+      } else if (d > daysInMonth) {
+        other = true;
+        d = d - daysInMonth;
+        m = currentMonth + 1;
+        if (m > 11) { m = 0; y++; }
+      }
+
+      const detail = phaseDetail(y, m, d);
+      const special = specialFullMoon(y, m, d);
+      const specialHtml = special ? `<div class="special"><a href="${special.url}" target="_blank" rel="noopener noreferrer" title="Open the history of ${special.name} in a new tab">${special.name}</a></div>` : '';
+      const classes = ['day'];
+      if (other) classes.push('other-month');
+      if (isToday(y, m, d)) classes.push('today');
+      html += `
+        <div class="${classes.join(' ')}" data-date="${localDateKey(y, m, d)}">
+          <div class="date-num">${d}</div>
+          <div class="moon-box">${moonSvg(detail.age)}</div>
+          <div class="phase">${detail.name}<br>${detail.pct}% lit</div>
+          ${specialHtml}
+          <div class="phase-time">Eastern Time<br>Stark County</div>
+        </div>`;
+    }
+    calendar.innerHTML = html;
+  }
+
+  function moveMonths(delta) {
+    currentMonth += delta;
+    while (currentMonth < 0) { currentMonth += 12; currentYear--; }
+    while (currentMonth > 11) { currentMonth -= 12; currentYear++; }
+    render();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    populateJumpers();
+    document.getElementById('prevMonth').addEventListener('click', () => moveMonths(-1));
+    document.getElementById('nextMonth').addEventListener('click', () => moveMonths(1));
+    document.getElementById('prevYear').addEventListener('click', () => moveMonths(-12));
+    document.getElementById('nextYear').addEventListener('click', () => moveMonths(12));
+    document.getElementById('todayBtn').addEventListener('click', () => { currentYear = todayLocal.year; currentMonth = todayLocal.month; render(); });
+    document.getElementById('jumpMonth').addEventListener('change', e => { currentMonth = Number(e.target.value); render(); });
+    document.getElementById('jumpYear').addEventListener('change', e => { currentYear = Number(e.target.value); render(); });
+    render();
+  });
+})();
+</script>
+</body>
+</html>
