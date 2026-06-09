@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Drea's Interactive Moon Phase Calendar - Version 3</title>
+<style>
+  :root {
+    --bg: #e6e6fa;
+    --panel: #ffffff;
+    --panel2: #f2eee7;
+    --text: #1c2430;
+    --muted: #687282;
+    --accent: #6d4f91;
+    --accent2: #936fb8;
+    --border: #d9d1c5;
+    --moon-dark: #141820;
+    --moon-light: #f6f0d5;
+    --today: #fff2b8;
+    --special: #fff6dc;
+    --shadow: rgba(24, 28, 36, .15);
+  }
+  body.dark {
+    --bg: #0e1118;
+    --panel: #171b26;
+    --panel2: #202635;
+    --text: #eef2fb;
+    --muted: #aab3c2;
+    --accent: #b995ff;
+    --accent2: #d5c0ff;
+    --border: #323a4b;
+    --moon-dark: #05070b;
+    --moon-light: #fff4c7;
+    --today: #3e3518;
+    --special: #302941;
+    --shadow: rgba(0, 0, 0, .45);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: #e6e6fa;
+    color: var(--text);
+  }
+  header {
+    padding: 22px 18px 12px;
+    text-align: center;
+  }
+  h1 { margin: 0; font-size: clamp(1.55rem, 4vw, 2.6rem); letter-spacing: .02em; }
+  .subtitle { color: var(--muted); margin-top: 8px; line-height: 1.45; }
+  .wrap { max-width: 1380px; margin: 0 auto; padding: 0 14px 28px; }
+  .toolbar, .legend, .info-row, .notes {
+    background: color-mix(in srgb, var(--panel) 94%, transparent);
+    border: 1px solid var(--border);
+    box-shadow: 0 10px 28px var(--shadow);
+    border-radius: 18px;
+  }
+  .toolbar {
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    gap: 10px;
+    align-items: end;
+    padding: 14px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(10px);
+  }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: .78rem; color: var(--muted); font-weight: 700; }
+  button, select, input {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 9px 10px;
+    font-size: .95rem;
+  }
+  button { cursor: pointer; font-weight: 700; }
+  button:hover { border-color: var(--accent); color: var(--accent); }
+  .prev, .next, .today, .print, .theme { grid-column: span 1; }
+  .month-field { grid-column: span 2; }
+  .year-field { grid-column: span 1; }
+  .date-field { grid-column: span 2; }
+  .range-field { grid-column: span 2; }
+  .notice { grid-column: span 12; color: var(--muted); font-size: .86rem; }
+  .month-title { text-align: center; margin: 22px 0 14px; font-size: clamp(1.4rem, 3vw, 2.1rem); }
+  .calendar {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(120px, 1fr));
+    gap: 10px;
+  }
+  .dow {
+    text-align: center;
+    padding: 10px;
+    font-weight: 800;
+    color: var(--muted);
+  }
+  .day {
+    min-height: 190px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 4px 16px var(--shadow);
+    padding: 9px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow: hidden;
+  }
+  .day.other { opacity: .42; }
+  .day.today { background: var(--today); border-color: var(--accent); }
+  .day.special { background: linear-gradient(180deg, var(--special), var(--panel)); }
+  .date-line { display: flex; justify-content: space-between; gap: 6px; align-items: center; }
+  .date-num { font-weight: 900; font-size: 1.05rem; }
+  .badge { font-size: .68rem; border: 1px solid var(--border); padding: 2px 6px; border-radius: 999px; color: var(--muted); white-space: nowrap; }
+  .moonbox { display: flex; gap: 9px; align-items: center; }
+  .moon-svg { flex: 0 0 54px; width: 54px; height: 54px; filter: drop-shadow(0 3px 7px rgba(0,0,0,.35)); }
+  .phase { font-weight: 800; font-size: .84rem; line-height: 1.15; }
+  .illum { color: var(--muted); font-size: .75rem; margin-top: 2px; }
+  .special-name { font-size: .77rem; line-height: 1.2; }
+  .special-name a { color: var(--accent); font-weight: 900; text-decoration: none; }
+  .special-name a:hover { text-decoration: underline; }
+  .times { font-size: .72rem; color: var(--muted); line-height: 1.25; }
+  .flags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: auto; }
+  .flag { font-size: .65rem; background: var(--panel2); border: 1px solid var(--border); border-radius: 999px; padding: 2px 6px; }
+  .legend { margin: 16px 0; padding: 12px 14px; display: flex; flex-wrap: wrap; gap: 9px; align-items: center; justify-content: center; }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: .86rem; }
+  .mini { width: 22px; height: 22px; }
+  .info-row { margin: 16px 0; padding: 14px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .card { background: var(--panel2); border: 1px solid var(--border); border-radius: 14px; padding: 12px; }
+  .card b { color: var(--accent); }
+  .card div { color: var(--muted); margin-top: 4px; font-size: .9rem; line-height: 1.4; }
+  .notes { margin-top: 18px; padding: 14px 16px; color: var(--muted); line-height: 1.45; font-size: .92rem; }
+  .notes strong { color: var(--text); }
+  .modal-backdrop { display:none; position: fixed; inset:0; background: rgba(0,0,0,.45); z-index: 20; padding: 24px; }
+  .modal { max-width: 760px; margin: 4vh auto; background: var(--panel); border:1px solid var(--border); border-radius:18px; padding:20px; box-shadow:0 20px 50px var(--shadow); }
+  .modal h2 { margin-top:0; }
+  .modal .close { float:right; }
+  .modal table { width:100%; border-collapse: collapse; margin-top: 10px; }
+  .modal td { padding: 7px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  .modal td:first-child { color: var(--muted); width: 38%; font-weight:700; }
+  @media (max-width: 980px) {
+    .calendar { grid-template-columns: repeat(2, 1fr); }
+    .dow { display: none; }
+    .toolbar { grid-template-columns: repeat(2, 1fr); }
+    .prev, .next, .today, .print, .theme, .month-field, .year-field, .date-field, .range-field { grid-column: span 1; }
+    .notice { grid-column: span 2; }
+    .info-row { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 560px) {
+    .calendar { grid-template-columns: 1fr; }
+    .toolbar { grid-template-columns: 1fr; }
+    .prev, .next, .today, .print, .theme, .month-field, .year-field, .date-field, .range-field, .notice { grid-column: span 1; }
+    .day { min-height: 165px; }
+  }
+  @media print {
+    body { background: white; color: black; }
+    .toolbar, .notes, .legend, .info-row { box-shadow: none; }
+    .toolbar button, .toolbar .field, .notice, .theme, .print { display:none; }
+    .calendar { gap: 5px; grid-template-columns: repeat(7, 1fr); }
+    .dow { display:block; padding:4px; }
+    .day { min-height: 130px; box-shadow:none; break-inside: avoid; padding:5px; }
+    .moon-svg { width: 40px; height:40px; flex-basis:40px; }
+    a { color:black; text-decoration:none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Drea's Interactive Moon Phase Calendar</h1>
+  <div class="subtitle">Stark County, Ohio observer location · month-by-month moon phases, named full moons, moonrise/moonset estimates, and special lunar notes.</div>
+</header>
+<div class="wrap">
+  <section class="toolbar" aria-label="Calendar controls">
+    <button class="prev" id="prevBtn">‹ Prev</button>
+    <button class="next" id="nextBtn">Next ›</button>
+    <div class="field month-field"><label for="monthSel">Month</label><select id="monthSel"></select></div>
+    <div class="field year-field"><label for="yearSel">Year</label><select id="yearSel"></select></div>
+    <button class="today" id="todayBtn">Today</button>
+    <div class="field date-field"><label for="dateJump">Jump to date</label><input id="dateJump" type="date" /></div>
+    <div class="field range-field"><label for="rangeSel">Range</label><select id="rangeSel"><option value="2">±2 years</option><option value="5">±5 years</option><option value="10">±10 years</option></select></div>
+    <button class="theme" id="themeBtn">Dark Mode</button>
+    <button class="print" id="printBtn">Print</button>
+    <div class="notice" id="rangeNotice"></div>
+  </section>
+
+  <h2 class="month-title" id="monthTitle"></h2>
+  <section class="info-row" id="summaryRow"></section>
+  <section class="legend" id="legend"></section>
+  <section class="calendar" id="calendar"></section>
+  <section class="notes">
+    <strong>Accuracy note:</strong> This self-contained browser calendar uses astronomical approximation formulas for Stark County, Ohio. Phase dates, illumination, moonrise, and moonset are intended for planning and educational reference, not navigation, observatory-grade predictions, legal use, or religious date-setting. Full moon names are traditional/natural-history references; links open in a new browser tab.
+  </section>
+</div>
+<div class="modal-backdrop" id="modalBackdrop"><div class="modal"><button class="close" id="closeModal">Close</button><div id="modalContent"></div></div></div>
+<script>
+const LAT = 40.8687, LON = -81.4023; // Stark County / Canton, Ohio approximate center
+const TZ = 'America/New_York';
+const synodic = 29.530588853;
+const knownNewMoonJD = 2451550.09765; // 2000-01-06 18:14 UTC
+const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const phaseNames = ['New Moon','Waxing Crescent','First Quarter','Waxing Gibbous','Full Moon','Waning Gibbous','Last Quarter','Waning Crescent'];
+const fullMoonNames = {
+  0: {name:'Wolf Moon', url:'https://en.wikipedia.org/wiki/Full_moon#Full_moon_names'},
+  1: {name:'Snow Moon', url:'https://en.wikipedia.org/wiki/Full_moon#Full_moon_names'},
+  2: {name:'Worm Moon', url:'https://en.wikipedia.org/wiki/Full_moon#Full_moon_names'},
+  3: {name:'Pink Moon', url:'https://en.wikipedia.org/wiki/Full_moon#Full_moon_names'},
+  4: {name:'Flower Moon', url:'https://en.wikipedia.org/wiki/Full_moon#Full_moon_names'},
+  5: {name:'Strawberry Moon', url:'https://en.wikipedia.org/wiki/Full_moon#Full_moon_names'},
+  6: {name:'Buck Moon', url:'https://en.wikipedia.org/wiki/Full_moon#Full_moon_names'},
+  7: {name:'Sturgeon Moon', url:'https://en.wikipedia.org/wiki/Full_moon#Full_moon_names'},
+  9: {name:"Hunter's Moon", url:'https://en.wikipedia.org/wiki/Hunter%27s_moon'},
+  10:{name:'Beaver Moon', url:'https://en.wikipedia.org/wiki/Full_moon#Full_moon_names'},
+  11:{name:'Cold Moon', url:'https://en.wikipedia.org/wiki/Full_moon#Full_moon_names'}
+};
+const eclipseDates = new Set([
+  '2024-03-25','2024-09-18','2025-03-14','2025-09-07','2026-03-03','2026-08-28','2027-02-20','2027-08-18','2028-01-12','2028-07-06','2028-12-31','2029-06-26','2029-12-20','2030-06-15','2030-12-09','2031-06-05','2031-10-30','2032-04-25','2032-10-18','2033-04-14','2033-10-08','2034-04-03','2034-09-28','2035-02-22','2035-08-19','2036-02-11','2036-08-07'
+]);
+let current = new Date(); current.setDate(1); current.setHours(12,0,0,0);
+let rangeYears = 2;
+const yMinBase = new Date().getFullYear();
+function pad(n){return String(n).padStart(2,'0');}
+function localISO(d){return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
+function addDays(d,n){let x=new Date(d); x.setDate(x.getDate()+n); return x;}
+function julianDay(date){ return date.getTime()/86400000 + 2440587.5; }
+function norm360(x){ x%=360; return x<0?x+360:x; }
+function phaseAge(date){ let jd = julianDay(date); let age = (jd-knownNewMoonJD)%synodic; if(age<0) age+=synodic; return age; }
+function illumFromAge(age){ return (1 - Math.cos(2*Math.PI*age/synodic))/2; }
+function phaseName(age){
+  const p=age/synodic;
+  if(p<0.035 || p>=0.965) return 'New Moon';
+  if(p<0.22) return 'Waxing Crescent';
+  if(p<0.285) return 'First Quarter';
+  if(p<0.465) return 'Waxing Gibbous';
+  if(p<0.535) return 'Full Moon';
+  if(p<0.72) return 'Waning Gibbous';
+  if(p<0.785) return 'Last Quarter';
+  return 'Waning Crescent';
+}
+function lunarDistanceKm(date){
+  const d = julianDay(date)-2451543.5;
+  const N = norm360(125.1228 - 0.0529538083*d);
+  const i = 5.1454;
+  const w = norm360(318.0634 + 0.1643573223*d);
+  const a = 60.2666;
+  const e = 0.054900;
+  const M = norm360(115.3654 + 13.0649929509*d);
+  const Mr = M*Math.PI/180;
+  const E = Mr + e*Math.sin(Mr)*(1+e*Math.cos(Mr));
+  const xv = a*(Math.cos(E)-e);
+  const yv = a*Math.sqrt(1-e*e)*Math.sin(E);
+  const r = Math.sqrt(xv*xv+yv*yv);
+  return r*6378.14;
+}
+function nearestPhaseDate(year, month, targetAge){
+  let best=null, bestDiff=999;
+  for(let day=1; day<=new Date(year, month+1, 0).getDate(); day++){
+    for(let h=0; h<24; h+=6){
+      let d=new Date(year,month,day,h,0,0);
+      let age=phaseAge(d);
+      let diff=Math.abs(age-targetAge); diff=Math.min(diff, synodic-diff);
+      if(diff<bestDiff){bestDiff=diff; best=d;}
+    }
+  }
+  return best;
+}
+function getFullMoonsInMonth(year,month){
+  const days = new Date(year,month+1,0).getDate();
+  let arr=[];
+  for(let day=1; day<=days; day++){
+    const noon=new Date(year,month,day,12);
+    const prev=phaseAge(addDays(noon,-1));
+    const curr=phaseAge(noon);
+    const next=phaseAge(addDays(noon,1));
+    const dist=Math.abs(curr - synodic/2);
+    if(dist < Math.abs(prev - synodic/2) && dist <= Math.abs(next - synodic/2) && dist < 1.2) arr.push(noon);
+  }
+  return arr;
+}
+function septemberEquinoxDate(year){ return new Date(year,8,22,12); }
+function harvestHunterNames(year){
+  let fulls=[];
+  for(let m=7;m<=10;m++){ getFullMoonsInMonth(year,m).forEach(d=>fulls.push(d)); }
+  const eq=septemberEquinoxDate(year);
+  fulls.sort((a,b)=>Math.abs(a-eq)-Math.abs(b-eq));
+  let harvest=fulls[0];
+  let after=fulls.filter(d=>d>harvest).sort((a,b)=>a-b)[0];
+  return {harvest: harvest?localISO(harvest):null, hunter: after?localISO(after):null};
+}
+function specialMoonForDate(date, monthFulls){
+  if(phaseName(phaseAge(date)) !== 'Full Moon') return null;
+  const iso=localISO(date), year=date.getFullYear(), month=date.getMonth();
+  const hh=harvestHunterNames(year);
+  if(iso===hh.harvest) return {name:'Harvest Moon', url:'https://en.wikipedia.org/wiki/Harvest_moon'};
+  if(iso===hh.hunter) return {name:"Hunter's Moon", url:'https://en.wikipedia.org/wiki/Hunter%27s_moon'};
+  if(monthFulls.length>1 && iso===localISO(monthFulls[1])) return {name:'Blue Moon', url:'https://en.wikipedia.org/wiki/Blue_moon'};
+  return fullMoonNames[month] || null;
+}
+function moonSVG(age, size=54){
+  const p=age/synodic, illum=illumFromAge(age), waxing=p<0.5;
+  const k = Math.abs(2*illum-1); // width factor for terminator ellipse
+  const id='m'+Math.random().toString(36).slice(2);
+  let shape='';
+  if(illum < .02) {
+    shape = `<circle cx="50" cy="50" r="47" fill="var(--moon-dark)"/>`;
+  } else if(illum > .98) {
+    shape = `<circle cx="50" cy="50" r="47" fill="var(--moon-light)"/>`;
+  } else if(illum < .5) {
+    const side = waxing ? 'right' : 'left';
+    if(side==='right') shape = `<circle cx="50" cy="50" r="47" fill="var(--moon-dark)"/><path d="M50 3 A47 47 0 0 1 50 97 A${47*k} 47 0 0 0 50 3" fill="var(--moon-light)"/>`;
+    else shape = `<circle cx="50" cy="50" r="47" fill="var(--moon-dark)"/><path d="M50 3 A47 47 0 0 0 50 97 A${47*k} 47 0 0 1 50 3" fill="var(--moon-light)"/>`;
+  } else {
+    const darkSide = waxing ? 'left' : 'right';
+    shape = `<circle cx="50" cy="50" r="47" fill="var(--moon-light)"/>`;
+    if(darkSide==='left') shape += `<path d="M50 3 A47 47 0 0 0 50 97 A${47*k} 47 0 0 0 50 3" fill="var(--moon-dark)"/>`;
+    else shape += `<path d="M50 3 A47 47 0 0 1 50 97 A${47*k} 47 0 0 1 50 3" fill="var(--moon-dark)"/>`;
+  }
+  return `<svg class="moon-svg" viewBox="0 0 100 100" role="img" aria-label="Moon phase"><defs><radialGradient id="${id}" cx="35%" cy="30%"><stop offset="0%" stop-color="rgba(255,255,255,.22)"/><stop offset="100%" stop-color="rgba(0,0,0,.12)"/></radialGradient></defs>${shape}<circle cx="50" cy="50" r="47" fill="url(#${id})"/><circle cx="50" cy="50" r="47" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1"/></svg>`;
+}
+function sunCoords(d) {
+  const rad=Math.PI/180, e=rad*23.4397;
+  const M=rad*norm360(357.5291 + 0.98560028*d);
+  const C=rad*(1.9148*Math.sin(M)+0.02*Math.sin(2*M)+0.0003*Math.sin(3*M));
+  const P=rad*102.9372;
+  const L=M+C+P+Math.PI;
+  return {dec: Math.asin(Math.sin(L)*Math.sin(e)), ra: Math.atan2(Math.sin(L)*Math.cos(e), Math.cos(L))};
+}
+function moonCoords(d) {
+  const rad=Math.PI/180, L=rad*norm360(218.316 + 13.176396*d), M=rad*norm360(134.963 + 13.064993*d), F=rad*norm360(93.272 + 13.229350*d);
+  const l=L + rad*6.289*Math.sin(M);
+  const b=rad*5.128*Math.sin(F);
+  const e=rad*23.4397;
+  return {ra: Math.atan2(Math.sin(l)*Math.cos(e)-Math.tan(b)*Math.sin(e), Math.cos(l)), dec: Math.asin(Math.sin(b)*Math.cos(e)+Math.cos(b)*Math.sin(e)*Math.sin(l))};
+}
+function siderealTime(d,lw){ return (280.16 + 360.9856235*d)*Math.PI/180 - lw; }
+function astroRefraction(h){ if(h<0) h=0; return 0.0002967/Math.tan(h+0.00312536/(h+0.08901179)); }
+function altitude(bodyCoords, d, lat, lon){
+  const lw=-lon*Math.PI/180, phi=lat*Math.PI/180, H=siderealTime(d,lw)-bodyCoords.ra;
+  return Math.asin(Math.sin(phi)*Math.sin(bodyCoords.dec)+Math.cos(phi)*Math.cos(bodyCoords.dec)*Math.cos(H));
+}
+function moonAltitude(date){ const d=julianDay(date)-2451545; let c=moonCoords(d); let h=altitude(c,d,LAT,LON); return h+astroRefraction(h); }
+function moonTimes(date){
+  let t = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0,0,0);
+  let hc = 0.133*Math.PI/180;
+  let h0 = moonAltitude(t)-hc, rise=null, set=null;
+  for(let i=1;i<=24;i+=2){
+    let h1 = moonAltitude(new Date(t.getTime()+i*3600000))-hc;
+    let h2 = moonAltitude(new Date(t.getTime()+(i+1)*3600000))-hc;
+    let a=(h0+h2)/2-h1, b=(h2-h0)/2, xe=-b/(2*a), ye=(a*xe+b)*xe+h1, d=b*b-4*a*h0;
+    let roots=[];
+    if(d>=0){ let dx=Math.sqrt(d)/(Math.abs(a)*2); let x1=xe-dx, x2=xe+dx; if(Math.abs(x1)<=1) roots.push(x1); if(Math.abs(x2)<=1) roots.push(x2); }
+    roots.forEach(x=>{ let hour=i+x; let ev=new Date(t.getTime()+hour*3600000); if(ye<0 && !rise) rise=ev; else if(ye>0 && !set) set=ev; });
+    h0=h2;
+  }
+  return {rise,set,alwaysUp:!rise&&!set&&h0>0, alwaysDown:!rise&&!set&&h0<=0};
+}
+function fmtTime(d){ if(!d) return '—'; return d.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'}); }
+function renderLegend(){
+  const ages=[0,3.7,7.38,11,14.765,18.5,22.15,26];
+  document.getElementById('legend').innerHTML=phaseNames.map((n,i)=>`<div class="legend-item">${moonSVG(ages[i],22).replace('moon-svg','moon-svg mini')}<span>${n}</span></div>`).join('');
+}
+function setupControls(){
+  const ms=document.getElementById('monthSel'), ys=document.getElementById('yearSel');
+  ms.innerHTML=months.map((m,i)=>`<option value="${i}">${m}</option>`).join('');
+  const nowY=new Date().getFullYear();
+  let html=''; for(let y=nowY-rangeYears; y<=nowY+rangeYears; y++) html+=`<option value="${y}">${y}</option>`; ys.innerHTML=html;
+}
+function updateControls(){ document.getElementById('monthSel').value=current.getMonth(); document.getElementById('yearSel').value=current.getFullYear(); document.getElementById('dateJump').value=localISO(new Date()); document.getElementById('rangeNotice').textContent=`Viewing range: ${new Date().getFullYear()-rangeYears} through ${new Date().getFullYear()+rangeYears}. Change range to look further backward or forward.`; }
+function clampCurrent(){ const y=current.getFullYear(), nowY=new Date().getFullYear(); if(y<nowY-rangeYears) current=new Date(nowY-rangeYears,0,1,12); if(y>nowY+rangeYears) current=new Date(nowY+rangeYears,11,1,12); }
+function renderSummary(monthFulls){
+  const firstQuarter=nearestPhaseDate(current.getFullYear(), current.getMonth(), synodic*.25);
+  const newMoon=nearestPhaseDate(current.getFullYear(), current.getMonth(), 0);
+  const lastQuarter=nearestPhaseDate(current.getFullYear(), current.getMonth(), synodic*.75);
+  const full=monthFulls[0];
+  const cards=[['New Moon',newMoon],['First Quarter',firstQuarter],['Full Moon',full],['Last Quarter',lastQuarter]];
+  document.getElementById('summaryRow').innerHTML = cards.map(([name,d])=>`<div class="card"><b>${name}</b><div>${d?d.toLocaleDateString(undefined,{weekday:'long', month:'long', day:'numeric', year:'numeric'}):'Not found in this month'}</div></div>`).join('') + `<div class="card"><b>Location</b><div>Stark County, Ohio · approx. ${LAT.toFixed(4)}°, ${LON.toFixed(4)}°</div></div>` + `<div class="card"><b>Tools</b><div>Click any day to see details. Use print for a clean monthly copy.</div></div>`;
+}
+function render(){
+  clampCurrent(); setupControls(); updateControls(); renderLegend();
+  const cal=document.getElementById('calendar');
+  const y=current.getFullYear(), m=current.getMonth();
+  document.getElementById('monthTitle').textContent=`${months[m]} ${y}`;
+  const monthFulls=getFullMoonsInMonth(y,m);
+  renderSummary(monthFulls);
+  const first=new Date(y,m,1,12), start=addDays(first,-first.getDay());
+  let html=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d=>`<div class="dow">${d}</div>`).join('');
+  const todayIso=localISO(new Date());
+  for(let i=0;i<42;i++){
+    const d=addDays(start,i); const age=phaseAge(new Date(d.getFullYear(),d.getMonth(),d.getDate(),12));
+    const phase=phaseName(age); const illum=Math.round(illumFromAge(age)*100); const iso=localISO(d);
+    const special=specialMoonForDate(d, monthFulls); const dist=lunarDistanceKm(d);
+    const mt=moonTimes(d);
+    let flags=[];
+    if(special) flags.push(`<span class="flag">Special Moon</span>`);
+    if(phase==='Full Moon' && dist<360000) flags.push(`<span class="flag">Supermoon candidate</span>`);
+    if(eclipseDates.has(iso)) flags.push(`<span class="flag">Lunar eclipse</span>`);
+    if(monthFulls.length>1 && phase==='Full Moon' && iso===localISO(monthFulls[1])) flags.push(`<span class="flag">Blue Moon</span>`);
+    const specialHtml=special?`<div class="special-name"><a href="${special.url}" target="_blank" rel="noopener noreferrer" title="Open history of ${special.name} in a new tab">${special.name}</a></div>`:'';
+    html+=`<article class="day ${d.getMonth()!==m?'other':''} ${iso===todayIso?'today':''} ${special?'special':''}" data-date="${iso}" tabindex="0">
+      <div class="date-line"><span class="date-num">${d.getDate()}</span>${iso===todayIso?'<span class="badge">Today</span>':''}</div>
+      <div class="moonbox">${moonSVG(age)}<div><div class="phase">${phase}</div><div class="illum">${illum}% illuminated</div>${specialHtml}</div></div>
+      <div class="times">Moonrise: ${fmtTime(mt.rise)}<br>Moonset: ${fmtTime(mt.set)}<br>Distance: ${Math.round(dist).toLocaleString()} km</div>
+      <div class="flags">${flags.join('')}</div>
+    </article>`;
+  }
+  cal.innerHTML=html;
+  cal.querySelectorAll('.day').forEach(el=>{ el.addEventListener('click',()=>showDay(el.dataset.date)); el.addEventListener('keydown',e=>{if(e.key==='Enter')showDay(el.dataset.date)}); });
+}
+function showDay(iso){
+  const [yy,mm,dd]=iso.split('-').map(Number); const d=new Date(yy,mm-1,dd,12);
+  const age=phaseAge(d), phase=phaseName(age), illum=Math.round(illumFromAge(age)*100), dist=Math.round(lunarDistanceKm(d));
+  const special=specialMoonForDate(d,getFullMoonsInMonth(yy,mm-1)); const mt=moonTimes(d);
+  let flags=[]; if(special) flags.push(special.name); if(phase==='Full Moon'&&dist<360000) flags.push('Supermoon candidate'); if(eclipseDates.has(iso)) flags.push('Lunar eclipse date');
+  document.getElementById('modalContent').innerHTML=`<h2>${d.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric',year:'numeric'})}</h2>
+  <div style="display:flex;align-items:center;gap:16px;margin:12px 0;">${moonSVG(age)}<div><strong>${phase}</strong><br>${illum}% illuminated</div></div>
+  <table><tr><td>Moonrise</td><td>${fmtTime(mt.rise)}</td></tr><tr><td>Moonset</td><td>${fmtTime(mt.set)}</td></tr><tr><td>Approx. lunar distance</td><td>${dist.toLocaleString()} km</td></tr><tr><td>Special reference</td><td>${special?`<a href="${special.url}" target="_blank" rel="noopener noreferrer">${special.name}</a>`:'—'}</td></tr><tr><td>Notes</td><td>${flags.length?flags.join(', '):'—'}</td></tr></table>`;
+  document.getElementById('modalBackdrop').style.display='block';
+}
+document.getElementById('prevBtn').onclick=()=>{ current.setMonth(current.getMonth()-1); render(); };
+document.getElementById('nextBtn').onclick=()=>{ current.setMonth(current.getMonth()+1); render(); };
+document.getElementById('todayBtn').onclick=()=>{ current=new Date(); current.setDate(1); current.setHours(12,0,0,0); render(); };
+document.getElementById('monthSel').onchange=e=>{ current.setMonth(+e.target.value); render(); };
+document.getElementById('yearSel').onchange=e=>{ current.setFullYear(+e.target.value); render(); };
+document.getElementById('rangeSel').onchange=e=>{ rangeYears=+e.target.value; render(); };
+document.getElementById('dateJump').onchange=e=>{ if(e.target.value){ const [y,m,d]=e.target.value.split('-').map(Number); rangeYears=Math.max(rangeYears, Math.abs(y-new Date().getFullYear())); current=new Date(y,m-1,1,12); render(); setTimeout(()=>{const el=document.querySelector(`[data-date="${e.target.value}"]`); if(el) el.scrollIntoView({behavior:'smooth', block:'center'});},50); }};
+document.getElementById('themeBtn').onclick=()=>{ document.body.classList.toggle('dark'); document.getElementById('themeBtn').textContent=document.body.classList.contains('dark')?'Light Mode':'Dark Mode'; };
+document.getElementById('printBtn').onclick=()=>window.print();
+document.getElementById('closeModal').onclick=()=>document.getElementById('modalBackdrop').style.display='none';
+document.getElementById('modalBackdrop').addEventListener('click',e=>{if(e.target.id==='modalBackdrop')e.target.style.display='none';});
+render();
+</script>
+</body>
+</html>
